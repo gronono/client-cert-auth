@@ -1,5 +1,6 @@
-# L'authorité de certification
-## Création de la clé privée et de la demande de certification:
+# Les certificats
+## L'authorité de certification
+#### Création de la clé privée et de la demande de certification:
 *$ openssl req -new -newkey rsa -nodes -out ca.csr -keyout ca.key*
 ```
 Generating a 2048 bit RSA private key
@@ -28,7 +29,7 @@ A challenge password []:
 An optional company name []:
 ```
 
-## Création du certificat autosigné de la CA
+#### Création du certificat autosigné de la CA
 *$ openssl x509 -trustout -signkey ca.key -days 3650 -req -in ca.csr -out ca.pem*
 ```
 Signature ok
@@ -36,17 +37,17 @@ subject=/C=NC/ST=Nouvelle-Caledonie/L=Noumea/O=Internet Widgits Pty Ltd/CN=CA po
 Getting Private key
 ```
 
-## Conversion en .crt
+#### Conversion en .crt
 *$ openssl x509 -outform der -in ca.pem -out ca.crt*
 
-## Création du fichier contenant le futur numéro de série du prochain certificat signé par notre CA
+#### Création du fichier contenant le futur numéro de série du prochain certificat signé par notre CA
 *$ echo 02 > ca.srl*
 
-## Importation dans le navigateur
+#### Importation dans le navigateur
 Comme le certificat est autosigné, il faut l'importer dans le navigateur.
 Dans firefox, Préférences > Avancé > Onglet Certificats > Afficher les certificats > Onglet Autorités > Importer ... > Cocher "Confirmer cette AC pour identifier des sites web."
 
-## Création d'un keystore contenant notre CA.
+#### Création d'un keystore contenant notre CA.
 *$ keytool -import -keystore trust.jks -trustcacerts -file ca.crt -storepass secret-trust*
 ```
 Propriétaire : CN=CA pour les tests, O=Internet Widgits Pty Ltd, L=Noumea, ST=Nouvelle-Caledonie, C=NC
@@ -63,11 +64,11 @@ Faire confiance à ce certificat ? [non] :  oui
 Certificat ajouté au fichier de clés
 ```
 
-## Copie du truststore
+#### Copie du truststore
 Copier le fichier trust.jks dans le dossier src/main/resources de l'application
 
-# Serveur
-## Création de la clé privée 
+## Serveur
+#### Création de la clé privée
 (on passe par keytool et non openssl pour avoir directement la clé privée dans le keystore)
 *$ keytool -genkey -alias server -keystore server.jks -storepass secret-server*
 ```
@@ -90,10 +91,10 @@ Entrez le mot de passe de la clé pour <server>
 	(appuyez sur Entrée s'il s'agit du mot de passe du fichier de clés) :  
 ```
 
-## Demande de certification
+#### Demande de certification
 *$ keytool -certreq -alias server -file server.csr -keystore server.jks -storepass secret-server*
 
-## Certification avec notre CA
+#### Certification avec notre CA
 *$ openssl x509 -CA ca.pem -CAkey ca.key -CAserial ca.srl -req -in server.csr -out server.pem*
 ```
 Signature ok
@@ -101,7 +102,7 @@ subject=/C=Unknown/ST=Unknown/L=Unknown/O=Unknown/OU=Unknown/CN=localhost
 Getting CA Private Key
 ```
 
-## Importation de la CA dans le keystore serveur
+#### Importation de la CA dans le keystore serveur
 *$ keytool -import -alias ca -keystore server.jks -trustcacerts -file ca.pem -storepass secret-server*
 ```
 Propriétaire : CN=CA pour les tests, O=Internet Widgits Pty Ltd, L=Noumea, ST=Nouvelle-Caledonie, C=NC
@@ -118,16 +119,16 @@ Faire confiance à ce certificat ? [non] :  oui
 Certificat ajouté au fichier de clés
 ```
 
-## Importation du certificat serveur dans le keystore serveur
+#### Importation du certificat serveur dans le keystore serveur
 *$ keytool -import -alias server -keystore server.jks -trustcacerts -file server.pem -storepass secret-server*
 ```
 Réponse de certificat installée dans le fichier de clés
 ```
 
-## Copie du keystore
+#### Copie du keystore
 Copier le fichier server.jks dans le répertoire src/main/resources
 
-## Activation le SSL dans Spring Boot
+#### Activation le SSL dans Spring Boot
 On peut maintenant activer le ssl dans le fichier src/main/resources/application.properties
 ```
 server.port = 8443
@@ -139,8 +140,8 @@ server.ssl.trust-store-password = secret-trust
 
 L'application doit fonctionner en HTTPS sans avertissement de sécurité (puisqu'on a ajouté notre CA dans le navigateur)
 
-# Client
-## Création d'une clé privée (pas besoin d'un keystore)
+## Client
+#### Création d'une clé privée (pas besoin d'un keystore)
 *$ openssl req -new -newkey rsa -nodes -out client.csr -keyout client.key*
 ```
 Generating a 2048 bit RSA private key
@@ -169,7 +170,7 @@ A challenge password []:
 An optional company name []:
 ```
 
-## Signature
+#### Signature
 *$ openssl x509 -CA ca.pem -CAkey ca.key -CAserial ca.srl -req -in client.csr -out client.pem*
 ```
 Signature ok
@@ -177,18 +178,18 @@ subject=/C=NC/ST=Nouvelle-Caledonie/L=Noumea/O=Internet Widgits Pty Ltd/CN=Gerar
 Getting CA Private Key
 ```
 
-## Export au format .p12
-*$ openssl pkcs12 -export -clcerts -in client.pem -inkey client.key -out client.p12 -name client* 
+#### Export au format .p12
+*$ openssl pkcs12 -export -clcerts -in client.pem -inkey client.key -out client.p12 -name client*
 ```
 Enter Export Password:secret-client
 Verifying - Enter Export Password:secret-client
 ```
 
-## Importation dans le navigateur
+#### Importation dans le navigateur
 Il faut ajouter notre certificat client au navigateur.
 Dans Firefox, Préférences > Avancé > Onglet Certificats > Afficher les certificats > Onglet "Vos certificats" > Importer ...
 
-## Activation de l'authentification client dans Spring Boot
+#### Activation de l'authentification client dans Spring Boot
 Puis dans la conf de Spring (application.properties), rajouter qu'on veut de l'authentification client
 ```
 server.ssl.client-auth = want
